@@ -3,6 +3,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>境界守望者抽卡模擬器</title>
     <style>
+        /* 保持原有的 CSS 樣式不變 */
         body {
             font-family: Arial, sans-serif;
             display: flex;
@@ -160,6 +161,7 @@
             <div id="probabilities">
                 <h3>抽卡機率</h3>
                 <p>金色角色: 0.92%</p>
+                <p>領主: 0.04%</p>
                 <p>極心池: 極心機率提升15倍</p>
                 <p>限時UP池: 瑞札戈、別西卜、盧修斯機率各提升15倍</p>
             </div>
@@ -293,20 +295,19 @@
 
         function getHeroType() {
             let rand = Math.random() * 100;
-            if (rand < 0.92) {
+            if (rand < 0.04) {
+                return 'lord';
+            } else if (rand < 0.96) {
                 // 金色角色
-                let goldRand = Math.random() * 16;
                 if (currentPool === 'extreme' && !extremeObtained) {
+                    let goldRand = Math.random() * 16;
                     if (goldRand < 15) return 'extreme';
                     return 'otherGold';
                 } else {
-                    if (goldRand < 15) {
-                        // UP角色
-                        let upRand = Math.random() * 3;
-                        if (upRand < 1) return 'lucius';
-                        if (upRand < 2) return 'beelzebub';
-                        return 'rezzago';
-                    }
+                    let goldRand = Math.random() * 48;
+                    if (goldRand < 15) return 'lucius';
+                    if (goldRand < 30) return 'beelzebub';
+                    if (goldRand < 45) return 'rezzago';
                     return 'otherGold';
                 }
             }
@@ -314,18 +315,15 @@
         }
 
         function getGuaranteedGoldHero() {
-            let goldRand = Math.random() * 16;
             if (currentPool === 'extreme' && !extremeObtained) {
+                let goldRand = Math.random() * 16;
                 if (goldRand < 15) return 'extreme';
                 return 'otherGold';
             } else {
-                if (goldRand < 15) {
-                    // UP角色
-                    let upRand = Math.random() * 3;
-                    if (upRand < 1) return 'lucius';
-                    if (upRand < 2) return 'beelzebub';
-                    return 'rezzago';
-                }
+                let goldRand = Math.random() * 48;
+                if (goldRand < 15) return 'lucius';
+                if (goldRand < 30) return 'beelzebub';
+                if (goldRand < 45) return 'rezzago';
                 return 'otherGold';
             }
         }
