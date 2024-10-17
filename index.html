@@ -1,0 +1,430 @@
+<!DOCTYPE html><html lang="zh-TW"><head><meta http-equiv="Content-Security-Policy" content="default-src 'self' 'unsafe-inline' 'unsafe-eval' data: blob: https://cdnjs.cloudflare.com https://cdn.jsdelivr.net https://code.jquery.com https://unpkg.com https://d3js.org https://threejs.org https://cdn.plot.ly https://stackpath.bootstrapcdn.com https://maps.googleapis.com https://cdn.tailwindcss.com https://ajax.googleapis.com https://kit.fontawesome.com https://cdn.datatables.net https://maxcdn.bootstrapcdn.com https://code.highcharts.com https://tako-static-assets-production.s3.amazonaws.com https://www.youtube.com https://fonts.googleapis.com https://fonts.gstatic.com https://pfst.cf2.poecdn.net https://i.imgur.com https://wikimedia.org https://*.icons8.com https://*.giphy.com https://picsum.photos https://images.unsplash.com; frame-src 'self' https://www.youtube.com https://trytako.com; child-src 'self'; manifest-src 'self'; worker-src 'self'; upgrade-insecure-requests; block-all-mixed-content;">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>境界守望者抽卡模擬器</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+            padding: 20px;
+        }
+        .container {
+            display: flex;
+            gap: 20px;
+        }
+        #animation-container {
+            width: 300px;
+            height: 450px;
+            background-color: white;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+            position: relative;
+            overflow: hidden;
+        }
+        .pool {
+            width: 100%;
+            height: 50%;
+            position: absolute;
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            align-items: center;
+            font-size: 24px;
+            font-weight: bold;
+            transition: all 0.5s ease;
+            cursor: pointer;
+            padding-top: 20px;
+        }
+        #extreme-pool {
+            top: 0;
+            background-color: #ff9999;
+        }
+        #up-pool {
+            bottom: 0;
+            background-color: #99ccff;
+        }
+        .active-pool {
+            border: 3px solid #ffcc00;
+            box-sizing: border-box;
+        }
+        #character {
+            width: 50px;
+            height: 50px;
+            background-color: #ffcc00;
+            border-radius: 50%;
+            position: absolute;
+            left: 50%;
+            top: 25%;
+            transform: translate(-50%, -50%);
+            transition: all 0.5s ease;
+        }
+        #counter {
+            position: absolute;
+            right: 10px;
+            top: 10px;
+            font-size: 18px;
+        }
+        #controls {
+            margin-top: 20px;
+            text-align: center;
+        }
+        #message {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            background-color: rgba(255,255,255,0.9);
+            padding: 10px;
+            border-radius: 5px;
+            display: none;
+        }
+        .progress-bar {
+            width: 90%;
+            height: 20px;
+            background-color: #ddd;
+            border-radius: 10px;
+            position: absolute;
+            left: 5%;
+        }
+        .progress {
+            width: 0%;
+            height: 100%;
+            border-radius: 10px;
+            transition: width 0.5s ease;
+        }
+        #extreme-progress-bar {
+            bottom: 40px;
+        }
+        #extreme-progress {
+            background-color: #ff5555;
+        }
+        #guarantee-progress-bar {
+            bottom: 40px;
+        }
+        #guarantee-progress {
+            background-color: #4CAF50;
+        }
+        .progress-text {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 12px;
+            color: black;
+            bottom: 20px;
+        }
+        #history {
+            width: 200px;
+            height: 400px;
+            overflow-y: auto;
+            background-color: white;
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        #stats {
+            width: 200px;
+            background-color: white;
+            border-radius: 10px;
+            padding: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        th, td {
+            border: 1px solid #ddd;
+            padding: 8px;
+            text-align: left;
+        }
+        th {
+            background-color: #f2f2f2;
+        }
+        #probabilities {
+            background-color: white;
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 10px;
+            box-shadow: 0 0 10px rgba(0,0,0,0.1);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div>
+            <div id="probabilities">
+                <h3>抽卡機率</h3>
+                <p>金色角色: 0.92%</p>
+                <p>極心池: 極心機率提升15倍</p>
+                <p>限時UP池: 瑞札戈、別西卜、盧修斯機率各提升15倍</p>
+            </div>
+            <div id="animation-container">
+                <div id="extreme-pool" class="pool active-pool" onclick="switchPool('extreme')">
+                    極心池
+                    <div id="extreme-progress-bar" class="progress-bar">
+                        <div id="extreme-progress" class="progress"></div>
+                    </div>
+                    <span id="extreme-progress-text" class="progress-text">0 / 250</span>
+                </div>
+                <div id="up-pool" class="pool" onclick="switchPool('up')">
+                    限時UP池
+                    <div id="guarantee-progress-bar" class="progress-bar">
+                        <div id="guarantee-progress" class="progress"></div>
+                    </div>
+                    <span id="guarantee-progress-text" class="progress-text">0 / 200</span>
+                </div>
+                <div id="character"></div>
+                <div id="counter">抽數: 0</div>
+                <div id="message"></div>
+            </div>
+            <div id="controls">
+                <button onclick="draw()">十抽</button>
+                <button onclick="reset()">重置</button>
+            </div>
+        </div>
+        <div id="history">
+            <h3>抽取歷史</h3>
+        </div>
+        <div id="stats">
+            <h3>英雄統計</h3>
+            <table>
+                <tbody><tr>
+                    <th>英雄</th>
+                    <th>數量</th>
+                </tr>
+                <tr>
+                    <td>盧修斯</td>
+                    <td id="lucius-count">0</td>
+                </tr>
+                <tr>
+                    <td>別西卜</td>
+                    <td id="beelzebub-count">0</td>
+                </tr>
+                <tr>
+                    <td>瑞札戈</td>
+                    <td id="rezzago-count">0</td>
+                </tr>
+                <tr>
+                    <td>極心</td>
+                    <td id="extreme-count">0</td>
+                </tr>
+                <tr>
+                    <td>領主</td>
+                    <td id="lord-count">0</td>
+                </tr>
+                <tr>
+                    <td>其他金色</td>
+                    <td id="other-gold-count">0</td>
+                </tr>
+                <tr>
+                    <td>普通角色</td>
+                    <td id="normal-count">0</td>
+                </tr>
+            </tbody></table>
+        </div>
+    </div>
+
+    <script>
+        let drawCount = 0;
+        let extremeCount = 0;
+        let currentPool = 'extreme';
+        const maxDraws = 200;
+        const maxExtremeDraws = 250;
+        let extremeObtained = false;
+        let stats = {
+            lucius: 0,
+            beelzebub: 0,
+            rezzago: 0,
+            extreme: 0,
+            lord: 0,
+            otherGold: 0,
+            normal: 0
+        };
+
+        function draw() {
+            let result = '';
+            for (let i = 0; i < 10; i++) {
+                drawCount++;
+                if (currentPool === 'extreme' && !extremeObtained) {
+                    extremeCount++;
+                }
+                let heroType = getHeroType();
+                
+                // 200抽保底
+                if (drawCount === 200 && heroType === 'normal') {
+                    heroType = getGuaranteedGoldHero();
+                }
+                
+                result += `第${drawCount}抽：${getChineseHeroName(heroType)}${drawCount === 200 && heroType !== 'normal' ? '（保底）' : ''}<br>`;
+                updateStats(heroType);
+                
+                if (heroType !== 'normal' && heroType !== 'otherGold') {
+                    showMessage(`恭喜！在第${drawCount}抽獲得${getChineseHeroName(heroType)}！`);
+                    if (heroType === 'extreme') {
+                        extremeObtained = true;
+                        switchPool('up');
+                    }
+                    if (heroType === 'extreme' || heroType === 'lucius' || heroType === 'beelzebub' || heroType === 'rezzago') {
+                        resetGuarantee();
+                    }
+                }
+                
+                if (extremeCount === 250 && !extremeObtained) {
+                    heroType = 'extreme';
+                    result += `第${drawCount}抽：${getChineseHeroName(heroType)}（保底）<br>`;
+                    updateStats(heroType);
+                    showMessage(`恭喜！在第${drawCount}抽獲得極心（保底）！`);
+                    extremeObtained = true;
+                    switchPool('up');
+                    resetGuarantee();
+                }
+            }
+
+            updateProgressBars();
+            updateCounter();
+            updateHistory(result);
+            updateStatsDisplay();
+        }
+
+        function getHeroType() {
+            let rand = Math.random() * 100;
+            if (rand < 0.92) {
+                // 金色角色
+                let goldRand = Math.random() * 16;
+                if (currentPool === 'extreme' && !extremeObtained) {
+                    if (goldRand < 15) return 'extreme';
+                    return 'otherGold';
+                } else {
+                    if (goldRand < 15) {
+                        // UP角色
+                        let upRand = Math.random() * 3;
+                        if (upRand < 1) return 'lucius';
+                        if (upRand < 2) return 'beelzebub';
+                        return 'rezzago';
+                    }
+                    return 'otherGold';
+                }
+            }
+            return 'normal';
+        }
+
+        function getGuaranteedGoldHero() {
+            let goldRand = Math.random() * 16;
+            if (currentPool === 'extreme' && !extremeObtained) {
+                if (goldRand < 15) return 'extreme';
+                return 'otherGold';
+            } else {
+                if (goldRand < 15) {
+                    // UP角色
+                    let upRand = Math.random() * 3;
+                    if (upRand < 1) return 'lucius';
+                    if (upRand < 2) return 'beelzebub';
+                    return 'rezzago';
+                }
+                return 'otherGold';
+            }
+        }
+
+        function getChineseHeroName(heroType) {
+            switch(heroType) {
+                case 'lucius': return '盧修斯';
+                case 'beelzebub': return '別西卜';
+                case 'rezzago': return '瑞札戈';
+                case 'extreme': return '極心';
+                case 'lord': return '領主';
+                case 'otherGold': return '其他金色角色';
+                case 'normal': return '普通角色';
+                default: return heroType;
+            }
+        }
+
+        function switchPool(pool) {
+            if (pool === 'extreme' && !extremeObtained) {
+                document.getElementById('character').style.top = '25%';
+                document.getElementById('up-pool').classList.remove('active-pool');
+                document.getElementById('extreme-pool').classList.add('active-pool');
+                currentPool = 'extreme';
+            } else if (pool === 'up' || extremeObtained) {
+                document.getElementById('character').style.top = '75%';
+                document.getElementById('extreme-pool').classList.remove('active-pool');
+                document.getElementById('up-pool').classList.add('active-pool');
+                currentPool = 'up';
+            }
+        }
+
+        function reset() {
+            drawCount = 0;
+            extremeCount = 0;
+            currentPool = 'extreme';
+            extremeObtained = false;
+            stats = {lucius: 0, beelzebub: 0, rezzago: 0, extreme: 0, lord: 0, otherGold: 0, normal: 0};
+            updateCounter();
+            document.getElementById('character').style.top = '25%';
+            document.getElementById('character').style.backgroundColor = '#ffcc00';
+            document.getElementById('up-pool').classList.remove('active-pool');
+            document.getElementById('extreme-pool').classList.add('active-pool');
+            hideMessage();
+            updateProgressBars();
+            updateStatsDisplay();
+            document.getElementById('history').innerHTML = '<h3>抽取歷史</h3>';
+        }
+
+        function showMessage(msg) {
+            const messageEl = document.getElementById('message');
+            messageEl.innerText = msg;
+            messageEl.style.display = 'block';
+            setTimeout(() => {
+                messageEl.style.display = 'none';
+            }, 3000);
+        }
+
+        function hideMessage() {
+            document.getElementById('message').style.display = 'none';
+        }
+
+        function updateProgressBars() {
+            const extremeProgressPercentage = (extremeCount / maxExtremeDraws) * 100;
+            const guaranteeProgressPercentage = (drawCount / maxDraws) * 100;
+            document.getElementById('extreme-progress').style.width = `${extremeProgressPercentage}%`;
+            document.getElementById('guarantee-progress').style.width = `${guaranteeProgressPercentage}%`;
+            document.getElementById('extreme-progress-text').innerText = extremeObtained ? "已獲取" : `${extremeCount} / 250`;
+            document.getElementById('guarantee-progress-text').innerText = `${drawCount} / 200`;
+        }
+
+        function updateCounter() {
+            document.getElementById('counter').innerText = `抽數: ${drawCount}`;
+        }
+
+        function updateHistory(result) {
+            const historyEl = document.getElementById('history');
+            historyEl.innerHTML += result;
+            historyEl.scrollTop = historyEl.scrollHeight;
+        }
+
+        function updateStats(heroType) {
+            stats[heroType]++;
+        }
+
+        function updateStatsDisplay() {
+            document.getElementById('lucius-count').innerText = stats.lucius;
+            document.getElementById('beelzebub-count').innerText = stats.beelzebub;
+            document.getElementById('rezzago-count').innerText = stats.rezzago;
+            document.getElementById('extreme-count').innerText = stats.extreme;
+            document.getElementById('lord-count').innerText = stats.lord;
+            document.getElementById('other-gold-count').innerText = stats.otherGold;
+            document.getElementById('normal-count').innerText = stats.normal;
+        }
+
+        function resetGuarantee() {
+            drawCount = 0;
+            updateProgressBars();
+        }
+    </script>
+
+
+</body></html>
